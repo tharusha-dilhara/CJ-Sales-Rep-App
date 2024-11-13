@@ -9,8 +9,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'dart:math';
 
-Future<void> createAndSharePdf(List<InvoiceItem> items) async {
+Future<void> createAndSharePdf(List<InvoiceItem> items,String shopName,String paymentMethod) async {
   final pdf = pw.Document();
+  
 
   // Get current date and time
   final now = DateTime.now();
@@ -19,7 +20,6 @@ Future<void> createAndSharePdf(List<InvoiceItem> items) async {
   Map<String, String?> salesRepData = await AuthService.getSalesRepData();
   final mobileNumber = salesRepData['mobileNumber'];
   final name = salesRepData['name'];
-  print(name);
 
   // Prepare data for table
   List<List<dynamic>> rows = [];
@@ -28,25 +28,25 @@ Future<void> createAndSharePdf(List<InvoiceItem> items) async {
   for (var item in items) {
     final double itemPrice = double.parse(item.price);
     final double itemDiscount = double.parse(item.discount);
-    double discountAmount = itemDiscount/100 * itemPrice;
+    double discountAmount = (itemDiscount / 100 * itemPrice);
+    String formattedDiscount = discountAmount.toStringAsFixed(2);
 
-    double finalAmount = itemPrice - discountAmount;
+    double finalAmount = itemPrice * item.qty - double.parse(formattedDiscount) * item.qty;
 
-// Round to the nearest 0.001
+    // Round to the nearest 0.001
     double roundedFinalAmount = (finalAmount * 1000).round() / 1000;
 
-// Convert to string and cut off the third decimal point
+    // Convert to string and cut off the third decimal point
     String formattedFinalAmount = roundedFinalAmount
         .toStringAsFixed(3)
         .substring(0, roundedFinalAmount.toStringAsFixed(4).length - 1);
-    
 
     rows.add([
       item.itemName,
       item.qty,
-      "RS ${item.price}",
-      "${item.discount} %",
-      "RS ${formattedFinalAmount}",
+      "RS.${item.price}",
+      "RS.${formattedDiscount} * ${item.qty}",
+      "RS.${finalAmount.toStringAsFixed(2)}",
     ]);
     totalPrice += double.parse(formattedFinalAmount);
   }
@@ -54,49 +54,116 @@ Future<void> createAndSharePdf(List<InvoiceItem> items) async {
   pdf.addPage(
     pw.Page(
       build: (pw.Context context) {
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              'CJ System',
-              style: pw.TextStyle(fontSize: 38, fontWeight: pw.FontWeight.bold),
+        return pw.Center(
+          child: pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.black, width: 2),
+              borderRadius: pw.BorderRadius.circular(10),
             ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              name ?? 'Unknown',
-              style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              mobileNumber ?? 'Unknown',
-              style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text('Date and Time: $currentDateTime',
-                style: pw.TextStyle(fontSize: 18)),
-            pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
-              headers: [
-                'Item Name',
-                'Item Qty',
-                'Item Price',
-                'Item Discount',
-                'Item Amount'
-              ],
-              data: rows,
-            ),
-            pw.SizedBox(height: 20),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.end,
+            padding: pw.EdgeInsets.all(20),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(
-                  'Total Price: RS ${totalPrice.toStringAsFixed(2)}',
-                  style: pw.TextStyle(
-                      fontSize: 18, fontWeight: pw.FontWeight.bold),
+                // Header with company name and logo (simplified)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'CJ Food Products',
+                      style: pw.TextStyle(
+                          fontSize: 30,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black),
+                    ),
+                    // You can add a logo here, for now it's omitted
+                  ],
                 ),
+                pw.SizedBox(height: 20),
+
+                // Sales Rep information
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.black, width: 1),
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
+                  padding: pw.EdgeInsets.all(10),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Sales done by ${name ?? 'Unknown'}',
+                        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.Text(
+                        'Mobile: ${mobileNumber ?? 'Unknown'}',
+                        style: pw.TextStyle(fontSize: 12),
+                      ),
+                      pw.Text(
+                        'Date: $currentDateTime',
+                        style: pw.TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+                // Shop Name and Payment Method
+                pw.Text(
+                  'Shop Name: $shopName',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(
+                  'Payment Method: $paymentMethod',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 10),
+
+                // Table of items
+                pw.Table.fromTextArray(
+                  headers: [
+                    'Item Name',
+                    'Qty',
+                    'Price',
+                    'Discount',
+                    'Net Price'
+                  ],
+                  data: rows,
+                  border: pw.TableBorder.all(color: PdfColors.grey, width: 1),
+                  cellAlignment: pw.Alignment.center,
+                  headerStyle: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 12, color: PdfColors.white),
+                  headerDecoration: pw.BoxDecoration(color: PdfColors.black),
+                  cellStyle: pw.TextStyle(fontSize: 9),
+                  
+                ),
+                pw.SizedBox(height: 20),
+
+                // Total Price Section
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.end,
+                  children: [
+                    pw.Container(
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.black, width: 1),
+                        borderRadius: pw.BorderRadius.circular(5),
+                      ),
+                      padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      child: pw.Text(
+                        'Total: RS ${totalPrice.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                            fontSize: 18, fontWeight: pw.FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+
+                // Footer with company info or terms
+                pw.Divider(),
+                pw.SizedBox(height: 10),
+                
               ],
             ),
-          ],
+          ),
         );
       },
     ),

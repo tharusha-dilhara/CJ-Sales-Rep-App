@@ -5,8 +5,15 @@ import 'package:flutter/material.dart';
 
 class FinishinvoiceView extends StatefulWidget {
   final List<InvoiceItem> items;
+  final String shopName;
+  final String paymentMethod;
 
-  const FinishinvoiceView({Key? key, required this.items}) : super(key: key);
+  const FinishinvoiceView({
+    Key? key,
+    required this.items,
+    required this.shopName,
+    required this.paymentMethod,
+  }) : super(key: key);
 
   @override
   State<FinishinvoiceView> createState() => _FinishinvoiceViewState();
@@ -14,29 +21,21 @@ class FinishinvoiceView extends StatefulWidget {
 
 class _FinishinvoiceViewState extends State<FinishinvoiceView> {
   String getItemAmount(InvoiceItem item) {
-    // Parsing price and discount as double
     double price = double.parse(item.price);
     double discount = double.parse(item.discount);
-    double discountAmount = discount/100 * price;
+    double discountAmount = discount / 100 * price;
+    double finalAmount = (price * item.qty) - (discountAmount * item.qty);
 
-    double finalAmount = price - discountAmount;
-
-// Round to the nearest 0.001
     double roundedFinalAmount = (finalAmount * 1000).round() / 1000;
-
-// Convert to string and cut off the third decimal point
     String formattedFinalAmount = roundedFinalAmount
         .toStringAsFixed(3)
         .substring(0, roundedFinalAmount.toStringAsFixed(4).length - 1);
 
-    print(formattedFinalAmount);
-
     return formattedFinalAmount;
-
   }
 
   double getTotalAmount() {
-    return widget.items.fold(0, (sum, item) => sum + double.parse(getItemAmount(item))*(item.qty));
+    return widget.items.fold(0, (sum, item) => sum + double.parse(getItemAmount(item)));
   }
 
   @override
@@ -51,9 +50,13 @@ class _FinishinvoiceViewState extends State<FinishinvoiceView> {
             CustomListTile(
               leadingIcon: Icons.share,
               title: 'Share invoice',
-              subtitle: 'print and share invoice',
+              subtitle: 'Print and share invoice',
               onTap: () {
-                createAndSharePdf(widget.items);
+                createAndSharePdf(
+                  widget.items,
+                  widget.shopName,
+                  widget.paymentMethod,
+                );
               },
             ),
             const SizedBox(height: 30),
@@ -64,7 +67,7 @@ class _FinishinvoiceViewState extends State<FinishinvoiceView> {
                   DataColumn(label: Text('Name')),
                   DataColumn(label: Text('Qty')),
                   DataColumn(label: Text('Price')),
-                  DataColumn(label: Text('Discount')),
+                  DataColumn(label: Text('Discount %')),
                   DataColumn(label: Text('Amount')),
                 ],
                 rows: widget.items.map((item) {
@@ -73,7 +76,7 @@ class _FinishinvoiceViewState extends State<FinishinvoiceView> {
                     DataCell(Text(item.itemName)),
                     DataCell(Text(item.qty.toString())),
                     DataCell(Text("RS ${item.price.toString()}")),
-                    DataCell(Text(" ${item.discount.toString()} %")),
+                    DataCell(Text("${item.discount.toString()} %")),
                     DataCell(Text("RS ${itemAmount.toStringAsFixed(2)}")),
                   ]);
                 }).toList(),

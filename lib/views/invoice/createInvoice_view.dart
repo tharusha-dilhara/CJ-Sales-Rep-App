@@ -208,7 +208,11 @@ class _CreateinvoiceViewState extends State<CreateinvoiceView> {
         ),
       );
       // createAndSharePdf(_items);
-      GoRouter.of(context).goNamed('finishinvoiceView', extra: _items);
+      GoRouter.of(context).goNamed('finishinvoiceView', extra: {
+        'items':_items,
+        'shopName': _selectedShopName,
+        'paymentMethod' :_selectedPaymentMethod
+      });
       // GoRouter.of(context).goNamed('invoice');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

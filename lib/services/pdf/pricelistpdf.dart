@@ -1,3 +1,4 @@
+import 'package:cj/services/auth/auth_service.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
@@ -14,6 +15,9 @@ Future<void> createAndSharePriceListPdf(List<dynamic> items) async {
   final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
   final currentDateTime = dateFormat.format(now);
 
+  Map<String, String?> salesRepData = await AuthService.getSalesRepData();
+  final name = salesRepData['name'];
+
   List<List<String>> rows = items.map((item) {
     return [
       item['itemName'].toString(),
@@ -28,8 +32,13 @@ Future<void> createAndSharePriceListPdf(List<dynamic> items) async {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(
-              'CJ System',
+              'CJ Food Products',
               style: pw.TextStyle(fontSize: 38, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Issued By: $name',
+              style: pw.TextStyle(fontSize: 18),
             ),
             pw.SizedBox(height: 20),
             pw.Text(

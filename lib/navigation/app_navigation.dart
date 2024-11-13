@@ -126,14 +126,21 @@ class AppNavigation {
                       path: "finishinvoiceView",
                       name: "finishinvoiceView",
                       pageBuilder: (context, state) {
-                        // Retrieve the list of InvoiceItem from the extra parameter
+                        final extraData = state.extra as Map<String, dynamic>;
                         final List<InvoiceItem> items =
-                            state.extra as List<InvoiceItem>;
+                            extraData['items'] as List<InvoiceItem>;
+                        final String selectedShopName =
+                            extraData['shopName'] as String;
+                        final String selectedPaymentMethod =
+                            extraData['paymentMethod'] as String;
 
                         return CustomTransitionPage<void>(
                           key: state.pageKey,
                           child: FinishinvoiceView(
-                              items: items), // Pass the items to the view
+                            items: items,
+                            shopName: selectedShopName,
+                            paymentMethod: selectedPaymentMethod,
+                          ), // Pass the items to the view
                           transitionsBuilder: (
                             context,
                             animation,
